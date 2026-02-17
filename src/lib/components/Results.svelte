@@ -65,6 +65,88 @@
 		</div>
 	</div>
 
+	{#if incorrect + skipped > 0}
+		<div class="mt-8 mb-8 text-left">
+			<h3 class="text-xl font-bold text-slate-100 mb-4">
+				Review Incorrect Answers
+			</h3>
+			<div class="space-y-4">
+				{#each answers.filter((a) => !a.isCorrect) as ans}
+					{@const question = questions.find(
+						(q) => q.id === ans.questionId,
+					)}
+					{#if question}
+						<div
+							class="p-5 bg-slate-800/40 rounded-lg border border-slate-700/50"
+						>
+							<div
+								class="flex justify-between items-start gap-4 mb-3"
+							>
+								<p
+									class="text-slate-100 font-medium text-lg leading-snug"
+								>
+									{question.question}
+								</p>
+								<span
+									class="shrink-0 text-xs font-bold px-2 py-1 rounded {ans.skipped
+										? 'bg-slate-700 text-slate-300'
+										: 'bg-red-900/30 text-red-400 border border-red-900/50'}"
+								>
+									{ans.skipped ? "SKIPPED" : "INCORRECT"}
+								</span>
+							</div>
+
+							<div
+								class="space-y-2 pl-4 border-l-2 border-slate-700"
+							>
+								{#each question.options as option}
+									{#if option.correct}
+										<div
+											class="flex flex-col items-start text-emerald-400"
+										>
+											<div
+												class="flex items-center gap-2"
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													width="16"
+													height="16"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													><polyline
+														points="20 6 9 17 4 12"
+													/></svg
+												>
+												<span class="font-bold"
+													>{option.text}</span
+												>
+											</div>
+											{#if option.explanation}
+												<p
+													class="text-sm text-emerald-500/80 mt-1 ml-6 leading-relaxed bg-emerald-950/20 p-2 rounded border border-emerald-900/30"
+												>
+													<span
+														class="font-semibold uppercase text-xs tracking-wider opacity-70"
+														>Explanation:</span
+													>
+													{option.explanation}
+												</p>
+											{/if}
+										</div>
+									{/if}
+								{/each}
+							</div>
+						</div>
+					{/if}
+				{/each}
+			</div>
+		</div>
+	{/if}
+
 	<div class="space-y-4">
 		<button
 			onclick={restart}

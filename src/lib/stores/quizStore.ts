@@ -4,6 +4,7 @@ import { browser } from '$app/environment';
 export interface Option {
     text: string;
     correct: boolean;
+    explanation?: string;
 }
 
 export interface Question {

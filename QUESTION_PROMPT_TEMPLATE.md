@@ -12,10 +12,11 @@ Act as a biology education expert. Your task is to generate a set of multiple-ch
 1. **JSON Format**: You must return ONLY the raw JSON object. Do not include any introductory or concluding text.
 2. **Options**: Each question must have exactly 4 options.
 3. **Correct Answer**: Exactly one option per question must be marked as `"correct": true`.
-4. **Question Structure**:
+4. **Explanation**: The correct option MUST include an `"explanation"` field describing why it is correct.
+5. **Question Structure**:
    - `id`: An incrementing integer.
    - `question`: The text of the question.
-   - `options`: An array of 4 objects, each with `text` (string) and `correct` (boolean).
+   - `options`: An array of 4 objects.
 
 ### JSON Schema Example:
 ```json
@@ -27,7 +28,7 @@ Act as a biology education expert. Your task is to generate a set of multiple-ch
       "question": "Sample Question Text",
       "options": [
         { "text": "Option A", "correct": false },
-        { "text": "Option B", "correct": true },
+        { "text": "Option B", "correct": true, "explanation": "Detailed reason why Option B is correct." },
         { "text": "Option C", "correct": false },
         { "text": "Option D", "correct": false }
       ]

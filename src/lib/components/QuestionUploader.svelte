@@ -46,6 +46,7 @@
 						options: q.options.map((o: any) => ({
 							text: o.text || "",
 							correct: !!o.correct,
+							explanation: o.explanation,
 						})),
 					};
 				},
@@ -71,7 +72,12 @@
 					question: "What is the powerhouse of the cell?",
 					options: [
 						{ text: "Nucleus", correct: false },
-						{ text: "Mitochondria", correct: true },
+						{
+							text: "Mitochondria",
+							correct: true,
+							explanation:
+								"Mitochondria generate most of the chemical energy needed to power the cell's biochemical reactions.",
+						},
 						{ text: "Ribosome", correct: false },
 						{ text: "Golgi apparatus", correct: false },
 					],
@@ -85,7 +91,10 @@
   "questions": [
     {
       "question": "...",
-      "options": [...] 
+      "options": [
+        { "text": "...", "correct": false },
+        { "text": "...", "correct": true, "explanation": "..." } 
+      ] 
     }
   ]
 }`;
