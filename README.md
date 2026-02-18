@@ -82,6 +82,56 @@ To load your own questions, provide a JSON object in the following format:
 
 ---
 
+## 🤖 Generating Questions with AI
+
+We recommend using **Google Gemini** to generate question sets from your notes. 
+
+1. Copy the prompt below.
+2. Paste it into [Google Gemini](https://gemini.google.com).
+3. Append your study notes.
+4. Copy the resulting JSON and paste it into the app.
+
+### Prompt Template
+
+```text
+Act as a biology education expert. Your task is to generate a set of multiple-choice questions based on the provided notes. The questions must be formatted in a specific JSON structure so they can be directly uploaded to a quiz application.
+
+Requirements:
+1. JSON Format: You must return ONLY the raw JSON object. Do not include any introductory or concluding text.
+2. Options: Each question must have exactly 4 options.
+3. Correct Answer: Exactly one option per question must be marked as "correct": true.
+4. Explanation: The correct option MUST include an "explanation" field describing why it is correct.
+5. Question Structure:
+   - id: An incrementing integer.
+   - question: The text of the question.
+   - options: An array of 4 objects.
+
+JSON Schema Example:
+{
+  "quiz_title": "Biology Practice Quiz",
+  "questions": [
+    {
+      "id": 1,
+      "question": "Sample Question Text",
+      "options": [
+        { "text": "Option A", "correct": false },
+        { "text": "Option B", "correct": true, "explanation": "Detailed reason why Option B is correct." },
+        { "text": "Option C", "correct": false },
+        { "text": "Option D", "correct": false }
+      ]
+    }
+  ]
+}
+
+Source Material (Notes):
+[PASTE YOUR NOTES HERE]
+
+Generation Task:
+Based on the notes above, please generate 20 questions in the JSON format specified.
+```
+
+---
+
 ## 📜 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
