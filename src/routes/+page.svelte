@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { quizStore } from '$lib/stores/quizStore';
-	import QuestionUploader from '$lib/components/QuestionUploader.svelte';
+	import QuestionUploader from '$lib/components/QuestionUploaderNew.svelte';
 	import QuizInterface from '$lib/components/QuizInterface.svelte';
 	import Results from '$lib/components/Results.svelte';
 	import { fly, fade } from 'svelte/transition';

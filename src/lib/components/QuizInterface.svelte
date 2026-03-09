@@ -1,21 +1,14 @@
 <script lang="ts">
 	import { quizStore } from "$lib/stores/quizStore";
 	import { onMount, onDestroy } from "svelte";
-
-	let { questions, currentQuestionIndex, timer, score, isActive } =
-		$quizStore;
-
-	// Subscribe to store changes to keep local reactive variables in sync
-	// Actually, in Svelte 5 with runes, we might need to derive them or just use $store in the template.
-	// But let's standardise on using the store directly in the template or derived values.
+	import { goto } from '$app/navigation';
 
 	// Timer logic
 	let timerInterval: any;
 
 	onMount(() => {
-		if (isActive) {
-			startTimer();
-		}
+		// start timer only when quiz is active
+		if ($quizStore.isActive) startTimer();
 	});
 
 	onDestroy(() => {
@@ -43,7 +36,14 @@
 		quizStore.submitAnswer(isCorrect, skipped);
 	}
 
-	// Reactive derived values accessing the store directly in the template allows Svelte to track dependencies
+	function quitQuiz() {
+		const confirmQuit = confirm('Quit the quiz and lose current progress?');
+		if (confirmQuit) {
+			quizStore.reset();
+			stopTimer();
+			goto('/');
+		}
+	}
 </script>
 
 <div class="space-y-6">
@@ -64,7 +64,17 @@
 			</span>
 		</div>
 
-		<div class="flex flex-col items-end">
+		<div class="flex items-center gap-4">
+				{#if $quizStore.isActive || ($quizStore.answers && $quizStore.answers.length > 0) && !$quizStore.isFinished}
+				<button
+					onclick={quitQuiz}
+					class="text-sm text-rose-400 hover:text-rose-200 font-medium px-3 py-2 rounded-lg border border-rose-900/30 bg-rose-950/10"
+				>
+					Quit
+				</button>
+			{/if}
+
+			<div class="flex flex-col items-end">
 			<span
 				class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
 				>Time Remaining</span
@@ -76,6 +86,7 @@
 			>
 				{formatTime($quizStore.timer)}
 			</span>
+			</div>
 		</div>
 	</div>
 
