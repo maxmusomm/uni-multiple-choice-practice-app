@@ -1,1 +1,62 @@
 @import 'tailwindcss';
+
+@theme {
+  --color-surface: #0e0e0e;
+  --color-on-surface: #e7e5e5;
+  --color-surface-variant: #252626;
+  --color-on-surface-variant: #acabab;
+  --color-primary: #b6c9d8;
+  --color-on-primary: #30424e;
+  --color-primary-container: #374955;
+  --color-on-primary-container: #c0d3e2;
+  --color-secondary: #9c9ea0;
+  --color-on-secondary: #1e2022;
+  --color-secondary-container: #393c3e;
+  --color-on-secondary-container: #bebfc2;
+  --color-error: #ee7d77;
+  --color-on-error: #490106;
+  --color-error-container: #7f2927;
+  --color-on-error-container: #ff9993;
+  --color-surface-container-highest: #252626;
+  --color-surface-container-high: #1f2020;
+  --color-surface-container: #191a1a;
+  --color-surface-container-low: #131313;
+  --color-surface-container-lowest: #000000;
+  --color-outline: #757575;
+  --color-outline-variant: #474848;
+  --color-primary-dim: #a8bbca;
+  --color-surface-bright: #2b2c2c;
+  --color-inverse-surface: #fcf9f8;
+  --color-inverse-on-surface: #565555;
+  --color-inverse-primary: #4f616e;
+  --color-tertiary: #dae6ff;
+  --color-on-tertiary: #46546b;
+  --color-tertiary-container: #cad8f4;
+  --color-on-tertiary-container: #3e4b62;
+  --color-tertiary-dim: #bccae5;
+
+  --font-headline: 'Newsreader', serif;
+  --font-body: 'Manrope', sans-serif;
+  --font-label: 'Inter', sans-serif;
+}
+
+body {
+  min-height: max(884px, 100dvh);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #474848;
+  border-radius: 10px;
+}

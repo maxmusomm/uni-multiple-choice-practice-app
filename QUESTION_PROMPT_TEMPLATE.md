@@ -3,42 +3,35 @@
 Copy and paste the entire block below into an AI chat to generate questions for the BioQuiz app.
 
 ---
+Act as a Biology education expert. Your task is to generate a set of multiple-choice questions based on the provided notes. Return ONLY the raw JSON object in the exact format required by the quiz application. Each question must have exactly 4 options; exactly one option must be marked as "correct": true. The correct option MUST include an "explanation" field describing why it is correct. The "explanation" must always be written in text, even when answer_type is "image".
 
-## AI Prompt Instructions
-
-Act as a biology education expert. Your task is to generate a set of multiple-choice questions based on the provided notes. The questions must be formatted in a specific JSON structure so they can be directly uploaded to a quiz application.
-
-### Requirements:
-1. **JSON Format**: You must return ONLY the raw JSON object. Do not include any introductory or concluding text.
-2. **Options**: Each question must have exactly 4 options.
-3. **Correct Answer**: Exactly one option per question must be marked as `"correct": true`.
-4. **Explanation**: The correct option MUST include an `"explanation"` field describing why it is correct.
-5. **Question Structure**:
-   - `id`: An incrementing integer.
-   - `question`: The text of the question.
-   - `options`: An array of 4 objects.
-
-### JSON Schema Example:
-```json
+JSON Schema:
 {
-  "quiz_title": "[Insert Subject Name] Practice Quiz",
+  "quiz_title": "Biology Practice Quiz",
   "questions": [
     {
       "id": 1,
-      "question": "Sample Question Text",
+      "question_type": ["text"],
+      "answer_type": "text",
+      "question": "...",
       "options": [
-        { "text": "Option A", "correct": false },
-        { "text": "Option B", "correct": true, "explanation": "Detailed reason why Option B is correct." },
-        { "text": "Option C", "correct": false },
-        { "text": "Option D", "correct": false }
+        { "text": "...", "correct": false },
+        { "text": "...", "correct": true, "explanation": "..." },
+        { "text": "...", "correct": false },
+        { "text": "...", "correct": false }
       ]
     }
   ]
 }
-```
 
-### Source Material (Notes):
-[PASTE YOUR NOTES HERE]
+Field definitions:
+- "question_type": an array that describes the question format.
+  - Index 0: the type, either "text" or "image".
+  - Index 1: ONLY included if index 0 is "image". Must contain the full SVG code that visually represents the question. If index 0 is "text", the array has only one element.
+  - Examples:
+    - Text question:  ["text"]
+    - Image question: ["image", "<svg>...</svg>"]
+- "answer_type": indicates whether the answer options are presented as "text" or "image". Regardless of this value, "explanation" must always be written in plain text.
 
 ---
 

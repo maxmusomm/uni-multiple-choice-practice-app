@@ -87,13 +87,14 @@ JSON Schema:
 Please generate the requested number of questions based on the notes I provide.`;
 	}
 
-				function copyPrompt() {
+				async function copyPrompt() {
 					const prompt = buildPrompt(selectedSubject);
 					try {
-						navigator.clipboard.writeText(prompt);
+						await navigator.clipboard.writeText(prompt);
 						alert('Prompt copied to clipboard');
 					} catch (e) {
 						console.error('Copy failed', e);
+						alert('Failed to copy prompt to clipboard. Please copy it manually from the text area.');
 					}
 				}
 
