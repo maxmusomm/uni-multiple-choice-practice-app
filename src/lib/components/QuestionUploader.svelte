@@ -13,76 +13,88 @@
 	let error = $state<string | null>(null);
 
 	function buildPrompt(subject: string) {
-		if (subject === 'physics') {
-			return `Act as a physics education expert for Physics. Include relevant physical quantities, equations, and units/context notes when appropriate. Explanations should reference underlying physical principles.
-
-Your task: generate a set of multiple-choice questions based on the provided notes. Return ONLY the raw JSON object (no markdown, commentary, or surrounding text) in the exact format required by the quiz application. Each question must have exactly 4 options; exactly one option must be marked "correct": true. The correct option MUST include an "explanation" field describing why it is correct.
-
-JSON Schema:
-{
-  "quiz_title": "Physics Practice Quiz",
-  "questions": [
-    {
-      "id": 1,
-      "question": "...",
-      "options": [
-        { "text": "...", "correct": false },
-        { "text": "...", "correct": true, "explanation": "..." },
-        { "text": "...", "correct": false },
-        { "text": "...", "correct": false }
-      ]
-    }
-  ]
-}
-
-Please generate the requested number of questions based on the notes I provide.`;
-		}
-
-		if (subject === 'chemistry') {
-			return `Act as a chemistry education expert for Chemistry. Include relevant chemical names, formulas, and safety/context notes when appropriate. Explanations should reference underlying chemical principles.
-
-Your task: generate a set of multiple-choice questions based on the provided notes. Return ONLY the raw JSON object (no markdown, commentary, or surrounding text) in the exact format required by the quiz application. Each question must have exactly 4 options; exactly one option must be marked "correct": true. The correct option MUST include an "explanation" field describing why it is correct.
-
-JSON Schema:
-{
-  "quiz_title": "Chemistry Practice Quiz",
-  "questions": [
-    {
-      "id": 1,
-      "question": "...",
-      "options": [
-        { "text": "...", "correct": false },
-        { "text": "...", "correct": true, "explanation": "..." },
-        { "text": "...", "correct": false },
-        { "text": "...", "correct": false }
-      ]
-    }
-  ]
-}
-
-Please generate the requested number of questions based on the notes I provide.`;
-		}
-
-		// default / biology
 		const title = subject === 'biology' ? 'Biology' : subject === 'physics' ? 'Physics' : 'Chemistry';
-		return `Act as a ${title} education expert. Your task is to generate a set of multiple-choice questions based on the provided notes. Return ONLY the raw JSON object in the exact format required by the quiz application. Each question must have exactly 4 options; exactly one option must be marked as "correct": true. The correct option MUST include an "explanation" field describing why it is correct.
+		
+		let spec = '';
+		if (subject === 'physics') {
+			spec = 'Act as a physics education expert for Physics. Include relevant physical quantities, equations, and units/context notes when appropriate. Explanations should reference underlying physical principles.';
+		} else if (subject === 'chemistry') {
+			spec = 'Act as a chemistry education expert for Chemistry. Include relevant chemical names, formulas, and safety/context notes when appropriate. Explanations should reference underlying chemical principles.';
+		} else {
+			spec = `Act as a ${title} education expert.`;
+		}
+
+		const exampleJson = {
+			quiz_title: `${title} Practice Quiz`,
+			questions: [
+				{
+				  id: 1,
+				  question_type: ["text"],
+				  answer_type: "text",
+				  question: "What is the powerhouse of the cell?",
+				  options: [
+					{ text: "Nucleus", correct: false },
+					{ text: "Mitochondria", correct: true, explanation: "Mitochondria produce ATP." },
+					{ text: "Ribosome", correct: false },
+					{ text: "Endoplasmic Reticulum", correct: false }
+				  ]
+				},
+				{
+				  id: 2,
+				  question_type: [
+					"image",
+					'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" stroke="white" stroke-width="4" fill="transparent"/><text x="50" y="55" fill="white" font-size="20" text-anchor="middle">A</text></svg>'
+				  ],
+				  answer_type: "text",
+				  question: "What shape is depicted in the diagram?",
+				  options: [
+					{ text: "Square", correct: false },
+					{ text: "Circle", correct: true, explanation: "The SVG explicitly draws a circle element." },
+					{ text: "Triangle", correct: false },
+					{ text: "Rectangle", correct: false }
+				  ]
+				},
+				{
+				  id: 3,
+				  question_type: ["text"],
+				  answer_type: "image",
+				  question: "Which of the following shapes represents a triangle?",
+				  options: [
+					{ text: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" stroke="white" stroke-width="4" fill="none"/></svg>', correct: false },
+					{ text: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="25" y="25" width="50" height="50" stroke="white" stroke-width="4" fill="none"/></svg>', correct: false },
+					{ text: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,15 90,85 10,85" stroke="white" stroke-width="4" fill="none"/></svg>', correct: true, explanation: "A polygon with three explicit points constructs a triangle." },
+					{ text: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="40" width="80" height="20" stroke="white" stroke-width="4" fill="none"/></svg>', correct: false }
+				  ]
+				},
+				{
+				  id: 4,
+				  question_type: [
+					"image",
+					'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="60" stroke="white" stroke-width="4" fill="none"/><text x="50" y="55" fill="white" font-size="20" text-anchor="middle">?</text></svg>'
+				  ],
+				  answer_type: "image",
+				  question: "Which of the following options is identical to the target shape above?",
+				  options: [
+					{ text: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" stroke="white" stroke-width="4" fill="none"/></svg>', correct: false },
+					{ text: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="60" stroke="white" stroke-width="4" fill="none"/></svg>', correct: true, explanation: "Both the target and this option draw a rectangle of the same dimensions." },
+					{ text: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><polygon points="50,20 80,80 20,80" stroke="white" stroke-width="4" fill="none"/></svg>', correct: false },
+					{ text: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><line x1="20" y1="20" x2="80" y2="80" stroke="white" stroke-width="4"/></svg>', correct: false }
+				  ]
+				}
+			]
+		};
+
+		return `${spec} Your task is to generate a set of multiple-choice questions based on the provided notes. Return ONLY the raw JSON object in the exact format required by the quiz application. Each question must have exactly 4 options; exactly one option must be marked as "correct": true. The correct option MUST include an "explanation" field describing why it is correct.
+
+CRITICAL FORMATTING RULES:
+- Do NOT wrap the JSON output in markdown code blocks like \`\`\`json ... \`\`\`. The response should begin with { and end with } and contain ONLY the JSON.
+- Do NOT escape underscores in JSON keys (use "question_type", NOT "question\\_type").
+- Do NOT escape angle brackets in SVG code (use "<svg>", NOT "\\<svg\\>").
+- Do NOT include markdown code blocks, formatting, or markdown links like [url](url) anywhere inside the JSON output strings.
+- Do NOT format URLs as markdown hyperlinks (must use "http://...", not "[http://...](http://...)").
 
 JSON Schema:
-{
-  "quiz_title": "${title} Practice Quiz",
-  "questions": [
-    {
-      "id": 1,
-      "question": "...",
-      "options": [
-        { "text": "...", "correct": false },
-        { "text": "...", "correct": true, "explanation": "..." },
-        { "text": "...", "correct": false },
-        { "text": "...", "correct": false }
-      ]
-    }
-  ]
-}
+${JSON.stringify(exampleJson, null, 2)}
 
 Please generate the requested number of questions based on the notes I provide.`;
 	}
@@ -98,6 +110,19 @@ Please generate the requested number of questions based on the notes I provide.`
 					}
 				}
 
+				function cleanJsonString(raw: string) {
+					let cleaned = raw;
+					cleaned = cleaned.replace(/```json/gi, '');
+					cleaned = cleaned.replace(/```/g, '');
+					cleaned = cleaned.replace(/\\_/g, '_');
+					cleaned = cleaned.replace(/\\</g, '<');
+					cleaned = cleaned.replace(/\\>/g, '>');
+					cleaned = cleaned.replace(/\[(https?:\/\/[^\]]+)\]\((https?:\/\/[^)]+)\)/g, '$2');
+					cleaned = cleaned.replace(/\[cite_start\]/g, '');
+					cleaned = cleaned.replace(/\[cite:[^\]]*\]/g, '');
+					return cleaned.trim();
+				}
+
 				function validateAndStart() {
 					error = null;
 					try {
@@ -105,7 +130,8 @@ Please generate the requested number of questions based on the notes I provide.`
 							throw new Error('Please enter JSON content');
 						}
 
-						const parsed = JSON.parse(jsonInput);
+						const cleanedInput = cleanJsonString(jsonInput);
+						const parsed = JSON.parse(cleanedInput);
 
 						if (!parsed.questions || !Array.isArray(parsed.questions)) {
 							throw new Error('JSON must contain a "questions" array');
@@ -124,6 +150,8 @@ Please generate the requested number of questions based on the notes I provide.`
 							}
 							return {
 								id: q.id || i + 1,
+								question_type: q.question_type || ["text"],
+								answer_type: q.answer_type || "text",
 								question: q.question,
 								options: q.options.map((o: any) => ({ text: o.text || '', correct: !!o.correct, explanation: o.explanation }))
 							};
@@ -142,6 +170,8 @@ Please generate the requested number of questions based on the notes I provide.`
 						questions: [
 							{
 								id: 1,
+								question_type: ["text"],
+								answer_type: "text",
 								question: 'What is the powerhouse of the cell?',
 								options: [
 									{ text: 'Nucleus', correct: false },
@@ -155,19 +185,21 @@ Please generate the requested number of questions based on the notes I provide.`
 					jsonInput = JSON.stringify(example, null, 2);
 				}
 
-				const placeholderText = `{
-				"questions": [
-					{
-						"question": "...",
-						"options": [
-							{ "text": "...", "correct": false },
-							{ "text": "...", "correct": true, "explanation": "..." },
-							{ "text": "...", "correct": false },
-							{ "text": "...", "correct": false }
-						]
-					}
-				]
-			}`;
+				const placeholderText = JSON.stringify({
+					questions: [
+						{
+							question_type: ["text"],
+							answer_type: "text",
+							question: "...",
+							options: [
+								{ text: "...", correct: false },
+								{ text: "...", correct: true, explanation: "..." },
+								{ text: "...", correct: false },
+								{ text: "...", correct: false }
+							]
+						}
+					]
+				}, null, 2);
 			</script>
 
 			<div class="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">

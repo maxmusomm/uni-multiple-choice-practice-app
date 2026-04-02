@@ -44,6 +44,12 @@
 			return true;
 		})
 	);
+
+	let expandedItems = $state<Record<number, boolean>>({});
+
+	function toggleExpand(id: number) {
+		expandedItems[id] = !expandedItems[id];
+	}
 </script>
 
 <div class="space-y-12">
@@ -103,45 +109,64 @@
 		</section>
 
 		<!-- Review Items List -->
-		<section class="space-y-6">
+		<section class="space-y-4">
 			{#each filteredItems as item (item.question.id)}
-				<div class="bg-surface-container rounded-xl overflow-hidden border border-outline-variant/10">
-					<div class="p-6">
-						<div class="flex justify-between items-start mb-4">
-							<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Question {item.index}</span>
-							<div class="flex gap-2">
-								{#if item.answer.isCorrect}
-									<span class="material-symbols-outlined text-primary text-lg" style="font-variation-settings: 'FILL' 1;">check_circle</span>
-								{:else if item.answer.skipped}
-									<span class="material-symbols-outlined text-on-surface-variant text-lg">horizontal_rule</span>
-								{:else}
-									<span class="material-symbols-outlined text-error text-lg">cancel</span>
-								{/if}
+				<div class="bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/10 {item.answer.isCorrect ? 'opacity-70 group hover:opacity-100 transition-opacity' : ''}">
+					<button onclick={() => toggleExpand(item.question.id)} class="w-full flex items-center justify-between p-6 hover:bg-surface-container transition-colors text-left group/btn">
+						<div class="flex items-center gap-6">
+							{#if item.answer.isCorrect}
+								<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+							{:else if item.answer.skipped}
+								<span class="material-symbols-outlined text-on-surface-variant text-xl">horizontal_rule</span>
+							{:else}
+								<span class="material-symbols-outlined text-error text-xl">cancel</span>
+							{/if}
+							<div>
+								<p class="text-sm font-label text-on-surface-variant mb-1">Question {item.index}</p>
+								<h4 class="font-body font-medium text-on-surface line-clamp-2">{item.question.question}</h4>
 							</div>
 						</div>
-						<h4 class="font-headline text-lg mb-6 leading-relaxed">{item.question.question}</h4>
-						
-						<div class="space-y-4 mb-8">
-							<!-- Correct Answer -->
-							<div class="relative pl-4 border-l border-primary/50">
-								<span class="font-label text-[10px] uppercase text-primary/80 block mb-1">Correct Answer</span>
-								<p class="font-body text-on-surface">{item.question.options.find((o) => o.correct)?.text || 'N/A'}</p>
-							</div>
-						</div>
-						
-						<!-- Editorial Context -->
-						{#if item.question.options.find((o) => o.correct)?.explanation}
-							<div class="bg-surface-container-low rounded-lg p-5 border border-outline-variant/10 mt-6">
-								<div class="flex items-center gap-2 mb-3">
-									<span class="material-symbols-outlined text-primary text-sm" data-icon="auto_stories">auto_stories</span>
-									<span class="font-headline italic text-sm">Editorial Context</span>
+						<span class="material-symbols-outlined text-on-surface-variant group-hover/btn:text-on-surface transition-colors flex-shrink-0 ml-4">
+							{expandedItems[item.question.id] ? 'expand_less' : 'expand_more'}
+						</span>
+					</button>
+
+					{#if expandedItems[item.question.id]}
+						<div class="px-6 md:px-20 pb-8 pt-2 bg-surface-container-low border-t border-outline-variant/5">
+							{#if item.question.question_type && item.question.question_type[0] === 'image'}
+								<div class="mb-6 aspect-square max-w-sm mx-auto flex items-center justify-center p-4 bg-surface-container border border-outline-variant/10 rounded-xl [&>svg]:w-full [&>svg]:max-h-full">
+									{@html item.question.question_type[1]}
 								</div>
-								<p class="font-body text-sm text-on-surface-variant leading-relaxed">
-									{item.question.options.find((o) => o.correct)?.explanation}
-								</p>
+							{/if}
+							
+							<div class="space-y-4">
+								<div class="relative pl-4 border-l border-primary/50">
+									<span class="font-label text-[10px] uppercase text-primary/80 block mb-1">Correct Answer</span>
+									<div class="font-body text-on-surface">
+										{#if item.question.answer_type === 'image'}
+											<div class="w-24 h-24 [&>svg]:w-full [&>svg]:max-h-full p-2 bg-surface-container rounded-lg border border-outline-variant/10 flex items-center justify-center mt-2">
+												{@html item.question.options.find((o) => o.correct)?.text || ''}
+											</div>
+										{:else}
+											<div class="text-sm text-on-surface bg-surface-container/50 p-4 rounded-lg border border-outline-variant/5 mt-2 leading-relaxed">{item.question.options.find((o) => o.correct)?.text || 'N/A'}</div>
+										{/if}
+									</div>
+								</div>
 							</div>
-						{/if}
-					</div>
+							
+							{#if item.question.options.find((o) => o.correct)?.explanation}
+								<div class="bg-surface-container rounded-lg p-5 border border-outline-variant/10 mt-6 md:mt-8">
+									<div class="flex items-center gap-2 mb-3">
+										<span class="material-symbols-outlined text-primary text-sm" data-icon="auto_stories">auto_stories</span>
+										<span class="font-headline italic text-sm text-primary">Editorial Context</span>
+									</div>
+									<p class="font-body text-sm text-on-surface-variant leading-relaxed">
+										{item.question.options.find((o) => o.correct)?.explanation}
+									</p>
+								</div>
+							{/if}
+						</div>
+					{/if}
 				</div>
 			{/each}
 		</section>

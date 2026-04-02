@@ -12,6 +12,31 @@
 	let timerMinutes = $state(10);
 	let error = $state<string | null>(null);
 
+	function cleanJsonString(raw: string) {
+		let cleaned = raw;
+		
+		// Remove markdown JSON code blocks
+		cleaned = cleaned.replace(/```json/gi, '');
+		cleaned = cleaned.replace(/```/g, '');
+		
+		// Fix escaped underscores which break JSON keys (e.g., question\_type)
+		cleaned = cleaned.replace(/\\_/g, '_');
+		
+		// Fix escaped angle brackets in SVGs (e.g., \<svg\>)
+		cleaned = cleaned.replace(/\\</g, '<');
+		cleaned = cleaned.replace(/\\>/g, '>');
+
+		// Fix LLM converting URLs to markdown links inside SVG xmlns strings
+		cleaned = cleaned.replace(/\[(https?:\/\/[^\]]+)\]\((https?:\/\/[^)]+)\)/g, '$2');
+		
+		// Strip out rogue citation tags LLMs add dynamically (e.g., [cite_start], [cite: 448])
+		cleaned = cleaned.replace(/\[cite_start\]/g, '');
+		cleaned = cleaned.replace(/\[cite:[^\]]*\]/g, '');
+
+		// Trim whitespace
+		return cleaned.trim();
+	}
+
 	function validateAndStart() {
 		error = null;
 		try {
@@ -19,7 +44,8 @@
 				throw new Error("Please enter JSON content");
 			}
 
-			const parsed = JSON.parse(jsonInput);
+			const cleanedInput = cleanJsonString(jsonInput);
+			const parsed = JSON.parse(cleanedInput);
 
 			// Basic validation
 			if (!parsed.questions || !Array.isArray(parsed.questions)) {
@@ -49,6 +75,8 @@
 					}
 					return {
 						id: q.id || i + 1,
+						question_type: q.question_type || ["text"],
+						answer_type: q.answer_type || "text",
 						question: q.question,
 						options: q.options.map((o: any) => ({
 							text: o.text || "",
@@ -106,32 +134,63 @@
 
 	function buildPrompt(subject: string) {
 		let title = 'Subject';
-		let roleDesc = 'an education expert';
-		let extra = '';
 
 		switch (subject) {
 			case 'physics':
 				title = 'Physics';
-				roleDesc = 'a physics education expert and problem-solver';
-				extra = 'Focus on clear definitions, units, and (where appropriate) concise numerical examples. Prefer conceptual questions with one correct answer and include any necessary units in explanations.';
 				break;
 			case 'chemistry':
 				title = 'Chemistry';
-				roleDesc = 'a chemistry education expert';
-				extra = 'Include relevant chemical names, formulas, and safety/context notes when appropriate. Explanations should reference underlying chemical principles.';
 				break;
 			default:
 				title = 'Biology';
-				roleDesc = 'a biology education expert';
-				extra = 'Emphasize biological concepts, concise definitions, and real-world examples in explanations.';
 		}
 
-		return `Act as ${roleDesc} for ${title}. ${extra}\n\nYour task: generate a set of multiple-choice questions based on the provided notes. Return ONLY the raw JSON object (no markdown, commentary, or surrounding text) in the exact format required by the quiz application. Each question must have exactly 4 options; exactly one option must be marked \"correct\": true. The correct option MUST include an \"explanation\" field describing why it is correct.\n\nJSON Schema:\n{\n  "quiz_title": "${title} Practice Quiz",\n  "questions": [\n    {\n      "id": 1,\n      "question": "...",\n      "options": [\n        { "text": "...", "correct": false },\n        { "text": "...", "correct": true, "explanation": "..." },\n        { "text": "...", "correct": false },\n        { "text": "...", "correct": false }\n      ]\n    }\n  ]\n}\n\nPlease generate the requested number of questions based on the notes I provide.`;
+		return `Act as a ${title} education expert. Your task is to generate a set of multiple-choice questions based on the provided notes. Return ONLY the raw JSON object in the exact format required by the quiz application. Each question must have exactly 4 options; exactly one option must be marked as "correct": true. The correct option MUST include an "explanation" field describing why it is correct. The "explanation" must always be written in text, even when answer_type is "image".
+
+CRITICAL JSON FORMATTING RULES:
+- Do NOT wrap the JSON output in markdown code blocks like \`\`\`json ... \`\`\`. The response should begin with { and end with } and contain ONLY the JSON.
+- Do NOT escape underscores in JSON keys (must use "question_type", not "question\\_type").
+- Do NOT escape angle brackets in SVG code (must use "<svg>", not "\\<svg\\>").
+- Do NOT include markdown code blocks, formatting, or citation tags (like [cite_start] or [cite: ...]) anywhere in the JSON output.
+- Do NOT format URLs as markdown hyperlinks (must use "http://...", not "[http://...](http://...)").
+
+JSON Schema:
+{
+  "quiz_title": "${title} Practice Quiz",
+  "questions": [
+    {
+      "id": 1,
+      "question_type": ["text"],
+      "answer_type": "text",
+      "question": "...",
+      "options": [
+        { "text": "...", "correct": false },
+        { "text": "...", "correct": true, "explanation": "..." },
+        { "text": "...", "correct": false },
+        { "text": "...", "correct": false }
+      ]
+    }
+  ]
+}
+
+Field definitions:
+- "question_type": an array that describes the question format.
+  - Index 0: the type, either "text" or "image".
+  - Index 1: ONLY included if index 0 is "image". Must contain the full SVG code that visually represents the question. Make sure that the SVGs are styled in white so they are visible on a dark background. If index 0 is "text", the array has only one element.
+  - Examples:
+    - Text question:  ["text"]
+    - Image question: ["image", "<svg>...</svg>"]
+- "answer_type": indicates whether the answer options are presented as "text" or "image". Regardless of this value, "explanation" must always be written in plain text.
+
+Please generate the requested number of questions based on the notes I provide.`;
 	}
 
 	const placeholderText = `{
   "questions": [
     {
+      "question_type": ["text"],
+      "answer_type": "text",
       "question": "...",
       "options": [
         { "text": "...", "correct": false },
@@ -177,13 +236,7 @@
 		</div>
 	</div>
 
-	<!-- Material Input Area (Design element included as requested) -->
-	<div class="space-y-4">
-		<div class="space-y-2">
-			<label for="material" class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Material Input</label>
-			<textarea id="material" class="w-full h-32 bg-surface-container-low rounded-lg p-4 font-body text-sm text-on-surface placeholder:text-outline-variant focus:bg-surface-bright focus:ring-1 focus:ring-primary/20 transition-all border-none resize-none custom-scrollbar" placeholder="Paste your study notes or chapter summaries here..."></textarea>
-		</div>
-	</div>
+
 
 	<!-- LLM Preview -->
 	<div class="bg-surface-container rounded-xl p-5 space-y-4">
