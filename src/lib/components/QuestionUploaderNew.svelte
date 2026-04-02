@@ -7,10 +7,35 @@
 		{ id: 'chemistry', label: 'Chemistry' }
 	];
 
-	let selectedSubject: string = SUBJECTS[0].id;
+	let selectedSubject = $state(SUBJECTS[0].id);
 	let jsonInput = $state("");
 	let timerMinutes = $state(10);
 	let error = $state<string | null>(null);
+
+	function cleanJsonString(raw: string) {
+		let cleaned = raw;
+		
+		// Remove markdown JSON code blocks
+		cleaned = cleaned.replace(/```json/gi, '');
+		cleaned = cleaned.replace(/```/g, '');
+		
+		// Fix escaped underscores which break JSON keys (e.g., question\_type)
+		cleaned = cleaned.replace(/\\_/g, '_');
+		
+		// Fix escaped angle brackets in SVGs (e.g., \<svg\>)
+		cleaned = cleaned.replace(/\\</g, '<');
+		cleaned = cleaned.replace(/\\>/g, '>');
+
+		// Fix LLM converting URLs to markdown links inside SVG xmlns strings
+		cleaned = cleaned.replace(/\[(https?:\/\/[^\]]+)\]\((https?:\/\/[^)]+)\)/g, '$2');
+		
+		// Strip out rogue citation tags LLMs add dynamically (e.g., [cite_start], [cite: 448])
+		cleaned = cleaned.replace(/\[cite_start\]/g, '');
+		cleaned = cleaned.replace(/\[cite:[^\]]*\]/g, '');
+
+		// Trim whitespace
+		return cleaned.trim();
+	}
 
 	function validateAndStart() {
 		error = null;
@@ -19,7 +44,8 @@
 				throw new Error("Please enter JSON content");
 			}
 
-			const parsed = JSON.parse(jsonInput);
+			const cleanedInput = cleanJsonString(jsonInput);
+			const parsed = JSON.parse(cleanedInput);
 
 			// Basic validation
 			if (!parsed.questions || !Array.isArray(parsed.questions)) {
@@ -49,6 +75,8 @@
 					}
 					return {
 						id: q.id || i + 1,
+						question_type: q.question_type || ["text"],
+						answer_type: q.answer_type || "text",
 						question: q.question,
 						options: q.options.map((o: any) => ({
 							text: o.text || "",
@@ -106,32 +134,63 @@
 
 	function buildPrompt(subject: string) {
 		let title = 'Subject';
-		let roleDesc = 'an education expert';
-		let extra = '';
 
 		switch (subject) {
 			case 'physics':
 				title = 'Physics';
-				roleDesc = 'a physics education expert and problem-solver';
-				extra = 'Focus on clear definitions, units, and (where appropriate) concise numerical examples. Prefer conceptual questions with one correct answer and include any necessary units in explanations.';
 				break;
 			case 'chemistry':
 				title = 'Chemistry';
-				roleDesc = 'a chemistry education expert';
-				extra = 'Include relevant chemical names, formulas, and safety/context notes when appropriate. Explanations should reference underlying chemical principles.';
 				break;
 			default:
 				title = 'Biology';
-				roleDesc = 'a biology education expert';
-				extra = 'Emphasize biological concepts, concise definitions, and real-world examples in explanations.';
 		}
 
-		return `Act as ${roleDesc} for ${title}. ${extra}\n\nYour task: generate a set of multiple-choice questions based on the provided notes. Return ONLY the raw JSON object (no markdown, commentary, or surrounding text) in the exact format required by the quiz application. Each question must have exactly 4 options; exactly one option must be marked \"correct\": true. The correct option MUST include an \"explanation\" field describing why it is correct.\n\nJSON Schema:\n{\n  "quiz_title": "${title} Practice Quiz",\n  "questions": [\n    {\n      "id": 1,\n      "question": "...",\n      "options": [\n        { "text": "...", "correct": false },\n        { "text": "...", "correct": true, "explanation": "..." },\n        { "text": "...", "correct": false },\n        { "text": "...", "correct": false }\n      ]\n    }\n  ]\n}\n\nPlease generate the requested number of questions based on the notes I provide.`;
+		return `Act as a ${title} education expert. Your task is to generate a set of multiple-choice questions based on the provided notes. Return ONLY the raw JSON object in the exact format required by the quiz application. Each question must have exactly 4 options; exactly one option must be marked as "correct": true. The correct option MUST include an "explanation" field describing why it is correct. The "explanation" must always be written in text, even when answer_type is "image".
+
+CRITICAL JSON FORMATTING RULES:
+- Do NOT wrap the JSON output in markdown code blocks like \`\`\`json ... \`\`\`. The response should begin with { and end with } and contain ONLY the JSON.
+- Do NOT escape underscores in JSON keys (must use "question_type", not "question\\_type").
+- Do NOT escape angle brackets in SVG code (must use "<svg>", not "\\<svg\\>").
+- Do NOT include markdown code blocks, formatting, or citation tags (like [cite_start] or [cite: ...]) anywhere in the JSON output.
+- Do NOT format URLs as markdown hyperlinks (must use "http://...", not "[http://...](http://...)").
+
+JSON Schema:
+{
+  "quiz_title": "${title} Practice Quiz",
+  "questions": [
+    {
+      "id": 1,
+      "question_type": ["text"],
+      "answer_type": "text",
+      "question": "...",
+      "options": [
+        { "text": "...", "correct": false },
+        { "text": "...", "correct": true, "explanation": "..." },
+        { "text": "...", "correct": false },
+        { "text": "...", "correct": false }
+      ]
+    }
+  ]
+}
+
+Field definitions:
+- "question_type": an array that describes the question format.
+  - Index 0: the type, either "text" or "image".
+  - Index 1: ONLY included if index 0 is "image". Must contain the full SVG code that visually represents the question. Make sure that the SVGs are styled in white so they are visible on a dark background. If index 0 is "text", the array has only one element.
+  - Examples:
+    - Text question:  ["text"]
+    - Image question: ["image", "<svg>...</svg>"]
+- "answer_type": indicates whether the answer options are presented as "text" or "image". Regardless of this value, "explanation" must always be written in plain text.
+
+Please generate the requested number of questions based on the notes I provide.`;
 	}
 
 	const placeholderText = `{
   "questions": [
     {
+      "question_type": ["text"],
+      "answer_type": "text",
       "question": "...",
       "options": [
         { "text": "...", "correct": false },
@@ -143,75 +202,91 @@
   ]}`;
 </script>
 
-<div class="bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-800">
-	<h2 class="text-2xl font-bold text-slate-100 mb-4">Upload Questions</h2>
+<!-- Heading -->
+<section class="mb-10">
+	<h1 class="font-headline text-4xl text-on-surface mb-2 leading-tight">Build Your Session</h1>
+	<p class="font-body text-on-surface-variant text-sm">Configure your study material and parameters to generate a custom AI practice quiz.</p>
+</section>
 
-	<div class="mb-6">
-		<label for="subject" class="block text-sm font-medium text-slate-300 mb-2">Subject</label>
-		<select id="subject" bind:value={selectedSubject} class="w-full p-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-100 mb-4">
-			{#each SUBJECTS as s}
-				<option value={s.id}>{s.label}</option>
-			{/each}
-		</select>
-
-		<label class="block text-sm font-medium text-slate-300 mb-2">Prompt for LLM (preview)</label>
-		<div class="relative mb-4">
-			<textarea readonly rows="6" class="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg font-mono text-sm text-slate-100 resize-none">{buildPrompt(selectedSubject)}</textarea>
-			<button on:click={copyPrompt} class="absolute right-2 top-2 px-3 py-1 bg-emerald-600 text-white rounded">Copy Prompt</button>
+<!-- Form Configuration -->
+<div class="space-y-8">
+	<div class="grid grid-cols-1 gap-6">
+		<!-- Subject Area -->
+		<div class="space-y-2">
+			<label for="subject" class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Subject Area</label>
+			<div class="relative">
+				<select id="subject" bind:value={selectedSubject} class="w-full bg-surface-container appearance-none px-4 py-3 rounded-lg font-body focus:ring-1 focus:ring-primary/20 border-none outline-none text-on-surface">
+					{#each SUBJECTS as s}
+						<option value={s.id}>{s.label}</option>
+					{/each}
+				</select>
+				<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
+			</div>
 		</div>
 
-		<label
-			for="json-input"
-			class="block text-sm font-medium text-slate-300 mb-2"
-			>Paste JSON Data</label
-		>
-		<textarea
-			id="json-input"
-			bind:value={jsonInput}
-			rows="12"
-			class="w-full p-3 bg-slate-950 border border-slate-700 rounded-lg font-mono text-sm text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-600"
-			placeholder={placeholderText}
-		></textarea>
+		<!-- Timer Option -->
+		<div class="space-y-2">
+			<label for="timer" class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Timer (Minutes)</label>
+			<div class="bg-surface-container-low px-4 py-3 rounded-lg flex items-center justify-between focus-within:ring-1 focus-within:ring-primary/20">
+				<div class="flex items-center gap-2 w-full">
+					<span class="material-symbols-outlined text-outline text-xl">timer</span>
+					<input id="timer" type="number" bind:value={timerMinutes} min="1" max="120" class="bg-transparent border-none p-0 text-on-surface font-body font-medium focus:ring-0 w-full outline-none" />
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+
+	<!-- LLM Preview -->
+	<div class="bg-surface-container rounded-xl p-5 space-y-4">
+		<div class="flex justify-between items-center">
+			<label for="prompt" class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Prompt for LLM (Preview)</label>
+			<button onclick={copyPrompt} class="flex items-center gap-1.5 text-primary text-[10px] font-bold uppercase tracking-wider hover:text-on-surface transition-colors">
+				<span class="material-symbols-outlined text-sm">content_copy</span>
+				Copy Prompt
+			</button>
+		</div>
+		<div class="bg-surface-container-lowest rounded-lg p-4 border border-outline-variant/10">
+			<textarea id="prompt" readonly class="w-full bg-transparent border-none text-[11px] text-on-surface-variant leading-relaxed font-mono custom-scrollbar resize-none focus:ring-0 p-0" rows="5">{buildPrompt(selectedSubject)}</textarea>
+		</div>
+	</div>
+
+	<!-- JSON Data Section -->
+	<div class="space-y-2">
+		<label for="jsonInputData" class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Paste JSON Data</label>
+		<div class="relative group">
+			<textarea id="jsonInputData" bind:value={jsonInput} placeholder={placeholderText} class="w-full h-24 bg-surface-container-lowest border border-outline-variant/10 rounded-lg p-3 font-mono text-[10px] text-primary/70 focus:outline-none focus:ring-1 focus:ring-primary/30 overflow-y-auto custom-scrollbar resize-none"></textarea>
+		</div>
 		{#if error}
-			<div
-				class="mt-2 p-3 bg-red-950/50 text-red-200 text-sm rounded-lg border border-red-900/50 flex items-start gap-2"
-			>
-				<span class="font-bold">Error:</span>
+			<div class="mt-2 p-3 bg-error-container text-on-error-container text-xs rounded-lg flex items-start gap-2">
+				<span class="material-symbols-outlined text-sm">error</span>
 				{error}
 			</div>
 		{/if}
 	</div>
 
-	<div class="flex flex-col sm:flex-row gap-4 items-end justify-between">
-		<div class="w-full sm:w-1/3">
-			<label
-				for="timer"
-				class="block text-sm font-medium text-slate-300 mb-2"
-				>Timer (minutes)</label
-			>
-			<input
-				type="number"
-				id="timer"
-				bind:value={timerMinutes}
-				min="1"
-				max="120"
-				class="w-full p-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-			/>
-		</div>
-
-		<div class="flex gap-3 w-full sm:w-auto">
-			<button
-				on:click={loadExample}
-				class="px-4 py-2 text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg font-medium transition-colors border border-slate-700"
-			>
+	<!-- Footer Action Area -->
+	<div class="pt-4 space-y-6">
+		<div class="flex items-center justify-between">
+			<!-- Status -->
+			<div class="flex items-center gap-3">
+				<span class="relative flex h-2 w-2">
+					<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+					<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+				</span>
+				<span class="font-label text-[11px] font-medium text-on-surface tracking-wide">System Ready</span>
+			</div>
+			<!-- Load Example Button -->
+			<button onclick={loadExample} class="font-label text-[10px] uppercase tracking-widest text-primary hover:text-on-surface transition-colors font-semibold ring-1 ring-primary/20 px-3 py-1.5 rounded-full">
 				Load Example
 			</button>
-			<button
-				on:click={validateAndStart}
-				class="flex-1 sm:flex-none px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold shadow-lg shadow-emerald-900/20 transition-all hover:translate-y-[-1px]"
-			>
-				Start Quiz
-			</button>
 		</div>
+
+		<!-- CTA -->
+		<button onclick={validateAndStart} class="w-full bg-gradient-to-b from-primary to-primary-dim text-on-primary font-body font-semibold py-4 rounded-lg shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+			Start Practice Session
+			<span class="material-symbols-outlined text-xl">play_arrow</span>
+		</button>
 	</div>
 </div>
